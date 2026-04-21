@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IRON WARFARE — AI vs AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+
+<header>
+  <div class="logo">⚔ IRON WARFARE</div>
+  <div class="header-status">● SIMULATION ACTIVE</div>
+  <div class="header-version">AI v1.4.2</div>
+</header>
+
+<div class="main-wrap">
+
+  <!-- Red side panel -->
+  <div class="side-panel">
+    <div class="unit-card red">
+      <div class="unit-label red" id="redUnitLabel">ALPHA UNIT</div>
+      <div class="hp-bar-wrap">
+        <div class="hp-label">HULL INTEGRITY</div>
+        <div class="hp-bar"><div class="hp-fill red" id="redHp" style="width:100%"></div></div>
+      </div>
+      <div class="stat-row"><span>KILLS</span><span class="stat-val" id="redKills">0</span></div>
+      <div class="stat-row"><span>STATUS</span><span class="stat-val" id="redStatus">STANDBY</span></div>
+      <div class="stat-row"><span>HP</span><span class="stat-val" id="redHpVal">100</span></div>
+      <button class="btn-ai-toggle red active" id="redAiToggle">AI: ACTIVE</button>
+    </div>
+    <div class="joy-panel" id="redJoyPanel" style="display:none">
+      <div class="joy-title">MANUAL CONTROL</div>
+      <div class="joy-area">
+        <div class="joy-base red" id="redJoyBase">
+          <div class="joy-knob" id="redJoyKnob"></div>
+        </div>
+        <button class="joy-fire red" id="redFireBtn">FIRE</button>
+      </div>
+      <div class="joy-hint">ARROWS + SPACE</div>
+    </div>
+    <div class="log-card">
+      <div class="log-title" id="redLogTitle">ALPHA LOG</div>
+      <div class="ai-log" id="redLog"></div>
+    </div>
+  </div>
+
+  <!-- Canvas area -->
+  <div class="canvas-wrap">
+    <div class="scoreboard">
+      <div class="score-item">
+        <div class="score-num red" id="scoreRed">0</div>
+        <div class="score-lbl" id="scoreRedLbl">ALPHA WINS</div>
+      </div>
+      <div class="score-center">
+        <div class="round-badge" id="roundBadge">ROUND 1</div>
+        <div class="match-timer" id="matchTimer">2:00</div>
+        <div class="score-divider">—</div>
+      </div>
+      <div class="score-item">
+        <div class="score-num blue" id="scoreBlue">0</div>
+        <div class="score-lbl" id="scoreBlueLbl">BRAVO WINS</div>
+      </div>
+    </div>
+
+    <canvas id="gameCanvas" width="660" height="460"></canvas>
+
+    <div class="controls">
+      <button class="btn btn-start" id="btnDeploy">▶ DEPLOY</button>
+      <button class="btn btn-speed" id="btnSpeed">⚡ SPEED: 1×</button>
+      <button class="btn btn-reset" id="btnReset">↺ RESET</button>
+      <button class="btn btn-settings" id="btnSettings">⚙ SETTINGS</button>
+    </div>
+  </div>
+
+  <!-- Blue side panel -->
+  <div class="side-panel">
+    <div class="unit-card blue">
+      <div class="unit-label blue" id="blueUnitLabel">BRAVO UNIT</div>
+      <div class="hp-bar-wrap">
+        <div class="hp-label">HULL INTEGRITY</div>
+        <div class="hp-bar"><div class="hp-fill blue" id="blueHp" style="width:100%"></div></div>
+      </div>
+      <div class="stat-row"><span>KILLS</span><span class="stat-val" id="blueKills">0</span></div>
+      <div class="stat-row"><span>STATUS</span><span class="stat-val" id="blueStatus">STANDBY</span></div>
+      <div class="stat-row"><span>HP</span><span class="stat-val" id="blueHpVal">100</span></div>
+      <button class="btn-ai-toggle blue active" id="blueAiToggle">AI: ACTIVE</button>
+    </div>
+    <div class="joy-panel" id="blueJoyPanel" style="display:none">
+      <div class="joy-title">MANUAL CONTROL</div>
+      <div class="joy-area">
+        <div class="joy-base blue" id="blueJoyBase">
+          <div class="joy-knob" id="blueJoyKnob"></div>
+        </div>
+        <button class="joy-fire blue" id="blueFireBtn">FIRE</button>
+      </div>
+      <div class="joy-hint">WASD + ENTER</div>
+    </div>
+    <div class="log-card">
+      <div class="log-title" id="blueLogTitle">BRAVO LOG</div>
+      <div class="ai-log" id="blueLog"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Settings modal -->
+<div class="settings-overlay" id="settingsOverlay">
+  <div class="settings-panel">
+    <div class="settings-header">
+      <div class="settings-title">⚙ MATCH SETTINGS</div>
+      <button class="settings-close" id="settingsClose" aria-label="Close">×</button>
+    </div>
+
+    <div class="settings-body">
+
+      <!-- Battlefield -->
+      <section class="settings-section">
+        <div class="settings-section-title">◆ BATTLEFIELD</div>
+        <div class="settings-grid">
+          <label class="settings-field settings-field-wide">
+            <span>Match type <em class="settings-hint">— Fight: first tank destroyed loses · King: destroy enemy king to win</em></span>
+            <select data-setting="match.mode">
+              <option value="deathmatch">Fight (Deathmatch)</option>
+              <option value="king">Protect the King</option>
+            </select>
+          </label>
+          <label class="settings-field">
+            <span>Match duration (sec)</span>
+            <input type="number" min="15" max="600" step="5" data-setting="match.durationSec" />
+          </label>
+          <label class="settings-field">
+            <span>Block HP</span>
+            <input type="number" min="1" max="50" step="1" data-setting="battlefield.obstacleHp" />
+          </label>
+          <label class="settings-field">
+            <span>King HP <em class="settings-hint">(king mode only)</em></span>
+            <input type="number" min="5" max="300" step="1" data-setting="match.kingHp" />
+          </label>
+          <label class="settings-field settings-field-wide">
+            <span>Layout <em class="settings-hint">— picking a layout auto-fills recommended match values</em></span>
+            <select data-setting="battlefield.layout">
+              <option value="default">Default</option>
+              <option value="open">Open</option>
+              <option value="crowded">Crowded</option>
+              <option value="maze">Maze (Open)</option>
+              <option value="tight">Maze (Tight / Random)</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <!-- Ollama URL (production / static hosting) -->
+      <section class="settings-section">
+        <div class="settings-section-title">◆ OLLAMA CONNECTION</div>
+        <div class="settings-grid">
+          <label class="settings-field settings-field-wide">
+            <span>Ollama base URL <em class="settings-hint">— empty = auto: dev uses Vite proxy; built game uses your PC at http://127.0.0.1:11434. Set a full URL if Ollama runs elsewhere (LAN IP, tunnel). HTTPS game pages cannot call http://localhost — use an https Ollama proxy or serve the game over http.</em></span>
+            <input type="text" spellcheck="false" placeholder="e.g. http://192.168.1.10:11434 or leave empty" data-setting="llm.ollamaBaseUrl" />
+          </label>
+        </div>
+      </section>
+
+      <!-- Tanks (shared) -->
+      <section class="settings-section">
+        <div class="settings-section-title">◆ TANK STATS</div>
+        <div class="settings-grid">
+          <label class="settings-field">
+            <span>Max hits to destroy</span>
+            <input type="number" min="1" max="50" step="1" data-setting="tank.maxHits" />
+          </label>
+          <label class="settings-field">
+            <span>Tank HP</span>
+            <input type="number" min="20" max="500" step="10" data-setting="tank.hp" />
+          </label>
+          <label class="settings-field">
+            <span>Tank speed</span>
+            <input type="number" min="0.2" max="6" step="0.1" data-setting="tank.speed" />
+          </label>
+          <label class="settings-field">
+            <span>Bullet damage</span>
+            <input type="number" min="1" max="100" step="1" data-setting="tank.bulletDamage" />
+          </label>
+          <label class="settings-field">
+            <span>Bullet speed</span>
+            <input type="number" min="1" max="20" step="0.5" data-setting="tank.bulletSpeed" />
+          </label>
+          <label class="settings-field">
+            <span>Bullet range (px)</span>
+            <input type="number" min="50" max="1000" step="10" data-setting="tank.bulletRange" />
+          </label>
+        </div>
+      </section>
+
+      <!-- Teams -->
+      <section class="settings-section">
+        <div class="settings-section-title">◆ TEAMS</div>
+        <div class="team-cards">
+          <!-- Red team -->
+          <div class="team-card team-red">
+            <div class="team-card-title">RED TEAM</div>
+            <label class="settings-field">
+              <span>Name</span>
+              <input type="text" maxlength="12" data-setting="teams.red.name" />
+            </label>
+            <label class="settings-field">
+              <span>Color</span>
+              <input type="color" data-setting="teams.red.color" />
+            </label>
+            <label class="settings-field">
+              <span>Accent</span>
+              <input type="color" data-setting="teams.red.accent" />
+            </label>
+            <label class="settings-field settings-field-wide">
+              <span>Controller <em class="settings-hint">— pick who drives this tank</em></span>
+              <select data-setting="teams.red.controller">
+                <option value="human">Human (keyboard/joystick)</option>
+                <option value="auto">Auto (scripted AI)</option>
+                <option value="ollama">Ollama (local LLM)</option>
+                <option value="openai" disabled>OpenAI (not wired up)</option>
+                <option value="claude" disabled>Claude (not wired up)</option>
+                <option value="gemini" disabled>Gemini (not wired up)</option>
+              </select>
+            </label>
+            <label class="settings-field llm-only">
+              <span>LLM model <em class="settings-hint" data-model-source="teams.red">— loading…</em></span>
+              <select data-setting="teams.red.agents.ollama.model" data-llm-field="model" data-model-select="teams.red"></select>
+            </label>
+            <label class="settings-field llm-only">
+              <span>Decision every (sec)</span>
+              <input type="number" min="1" max="10" step="0.5" data-setting="teams.red.agents.ollama.intervalSec" data-llm-field="intervalSec" />
+            </label>
+            <label class="settings-field llm-only">
+              <span>Show reasoning in log</span>
+              <input type="checkbox" data-setting="teams.red.agents.ollama.showReasoning" data-llm-field="showReasoning" />
+            </label>
+            <label class="settings-field settings-field-wide llm-only">
+              <span>Custom instructions <em class="settings-hint">— appended to the agent's system prompt, e.g. "play cautiously, prefer FLANK_RIGHT"</em></span>
+              <textarea rows="3" placeholder="Be a cautious sniper. Avoid open areas. Prefer HOLD + ATTACK over ADVANCE."
+                        data-setting="teams.red.agents.ollama.systemPromptExtra"
+                        data-llm-field="systemPromptExtra"></textarea>
+            </label>
+            <label class="settings-field">
+              <span>Aggression (0–1) <em class="settings-hint">fallback for auto / LLM default</em></span>
+              <input type="number" min="0" max="1" step="0.05" data-setting="teams.red.aggression" />
+            </label>
+            <label class="settings-field">
+              <span>Retreat HP %</span>
+              <input type="number" min="0" max="100" step="1" data-setting="teams.red.retreatHp" />
+            </label>
+            <label class="settings-field">
+              <span>Fire rate (frames)</span>
+              <input type="number" min="5" max="240" step="1" data-setting="teams.red.fireRate" />
+            </label>
+          </div>
+
+          <!-- Blue team -->
+          <div class="team-card team-blue">
+            <div class="team-card-title">BLUE TEAM</div>
+            <label class="settings-field">
+              <span>Name</span>
+              <input type="text" maxlength="12" data-setting="teams.blue.name" />
+            </label>
+            <label class="settings-field">
+              <span>Color</span>
+              <input type="color" data-setting="teams.blue.color" />
+            </label>
+            <label class="settings-field">
+              <span>Accent</span>
+              <input type="color" data-setting="teams.blue.accent" />
+            </label>
+            <label class="settings-field settings-field-wide">
+              <span>Controller</span>
+              <select data-setting="teams.blue.controller">
+                <option value="human">Human (keyboard/joystick)</option>
+                <option value="auto">Auto (scripted AI)</option>
+                <option value="ollama">Ollama (local LLM)</option>
+                <option value="openai" disabled>OpenAI (not wired up)</option>
+                <option value="claude" disabled>Claude (not wired up)</option>
+                <option value="gemini" disabled>Gemini (not wired up)</option>
+              </select>
+            </label>
+            <label class="settings-field llm-only">
+              <span>LLM model <em class="settings-hint" data-model-source="teams.blue">— loading…</em></span>
+              <select data-setting="teams.blue.agents.ollama.model" data-llm-field="model" data-model-select="teams.blue"></select>
+            </label>
+            <label class="settings-field llm-only">
+              <span>Decision every (sec)</span>
+              <input type="number" min="1" max="10" step="0.5" data-setting="teams.blue.agents.ollama.intervalSec" data-llm-field="intervalSec" />
+            </label>
+            <label class="settings-field llm-only">
+              <span>Show reasoning in log</span>
+              <input type="checkbox" data-setting="teams.blue.agents.ollama.showReasoning" data-llm-field="showReasoning" />
+            </label>
+            <label class="settings-field settings-field-wide llm-only">
+              <span>Custom instructions <em class="settings-hint">— appended to the agent's system prompt</em></span>
+              <textarea rows="3" placeholder="Play aggressively, rush the enemy king, take risks."
+                        data-setting="teams.blue.agents.ollama.systemPromptExtra"
+                        data-llm-field="systemPromptExtra"></textarea>
+            </label>
+            <label class="settings-field">
+              <span>Aggression (0–1) <em class="settings-hint">fallback for auto / LLM default</em></span>
+              <input type="number" min="0" max="1" step="0.05" data-setting="teams.blue.aggression" />
+            </label>
+            <label class="settings-field">
+              <span>Retreat HP %</span>
+              <input type="number" min="0" max="100" step="1" data-setting="teams.blue.retreatHp" />
+            </label>
+            <label class="settings-field">
+              <span>Fire rate (frames)</span>
+              <input type="number" min="5" max="240" step="1" data-setting="teams.blue.fireRate" />
+            </label>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="settings-footer">
+      <button class="btn btn-reset" id="settingsDefaults">↺ DEFAULTS</button>
+      <div class="settings-footer-spacer"></div>
+      <button class="btn btn-reset" id="settingsCancel">CANCEL</button>
+      <button class="btn btn-start"  id="settingsApply">✓ APPLY &amp; RESET</button>
+    </div>
+  </div>
+</div>
+
+<!-- Winner overlay -->
+<div class="winner-overlay" id="winnerOverlay">
+  <div class="winner-header" id="winnerHeader">GAME OVER</div>
+  <div class="winner-text" id="winnerText">ALPHA WINS</div>
+  <div class="winner-sub" id="winnerSub">HULL DESTROYED</div>
+  <div class="overlay-actions">
+    <button class="btn btn-start" id="btnNextRound">▶ NEXT ROUND</button>
+    <button class="btn btn-reset" id="btnRestartMatch">↺ RESTART MATCH</button>
+  </div>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "name": "tankgame",
+  "version": "1.0.0",
+  "description": "IRON WARFARE — AI vs AI Tank Battle",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vijayasankar1986/ai-tankgame.git"
+  },
+  "homepage": "https://github.com/vijayasankar1986/ai-tankgame#readme",
+  "bugs": {
+    "url": "https://github.com/vijayasankar1986/ai-tankgame/issues"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}

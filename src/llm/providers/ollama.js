@@ -4,12 +4,14 @@
 //   • `npm run dev` + empty `settings.llm.ollamaBaseUrl` → POST/GET to
 //     `/api/llm/ollama` and `/api/llm/ollama-tags` (Vite proxies to the
 //     machine where Vite runs — usually your dev PC).
-//   • `vite build` + empty base → browser calls `http://127.0.0.1:11434`
-//     so **each visitor's browser** talks to **that visitor's** Ollama.
-//     (HTTPS game pages cannot call http://127.0.0.1 — browser blocks mixed
-//     content; use http:// for the game, a tunneled HTTPS Ollama, or set
-//     `ollamaBaseUrl` to your own reverse proxy.)
-//   • Non-empty `ollamaBaseUrl` → always use that host (e.g. LAN IP).
+//   • `vite build` + **http:** page + empty base → `http://127.0.0.1:11434`
+//     (visitor's browser → that visitor's Ollama; needs OLLAMA_ORIGINS CORS).
+//   • `vite build` + **https:** page + empty base → same-origin
+//     `/api/llm/ollama-tags` (like dev). The host must reverse-proxy those
+//     paths to Ollama, **or** set `ollamaBaseUrl` to an **https://** URL that
+//     reaches your Ollama (tunnel / LAN proxy). Browsers block http://127.0.0.1
+//     from https pages (mixed content).
+//   • Non-empty `ollamaBaseUrl` → that origin for `/api/generate` and `/api/tags`.
 //
 // Ollama CORS: set `OLLAMA_ORIGINS` to include your game origin, e.g.
 //   OLLAMA_ORIGINS=https://mygame.example,http://localhost:5173
@@ -20,24 +22,46 @@
 import { settings } from '../../Settings.js'
 
 /**
- * Resolved Ollama API root (no trailing slash).
- * @returns {{ mode: 'vite-proxy' } | { mode: 'direct', base: string }}
+ * Same-origin paths: Vite dev proxy and production hosts that forward these
+ * to Ollama (see vite.config.js). Respects `import.meta.env.BASE_URL`.
+ * @param {'tags' | 'generate'} kind
+ */
+function bundledOllamaPath(kind) {
+  const seg = kind === 'tags' ? 'api/llm/ollama-tags' : 'api/llm/ollama'
+  const base = import.meta.env.BASE_URL || '/'
+  if (typeof window !== 'undefined') {
+    try {
+      const u = new URL(base, window.location.origin)
+      const p = u.pathname.endsWith('/') ? u.pathname : `${u.pathname}/`
+      return `${p}${seg}`.replace(/\/+/g, '/')
+    } catch {
+      /* fall through */
+    }
+  }
+  const p = base.endsWith('/') ? base : `${base}/`
+  return `${p}${seg}`.replace(/\/+/g, '/')
+}
+
+/**
+ * @returns {{ mode: 'bundled' } | { mode: 'direct', base: string }}
  */
 function ollamaRoute() {
   const custom = (settings.llm?.ollamaBaseUrl ?? '').trim().replace(/\/$/, '')
   if (custom) return { mode: 'direct', base: custom }
-  if (import.meta.env.DEV) return { mode: 'vite-proxy' }
+  const httpsPage =
+    typeof window !== 'undefined' && window.location.protocol === 'https:'
+  if (import.meta.env.DEV || httpsPage) return { mode: 'bundled' }
   return { mode: 'direct', base: 'http://127.0.0.1:11434' }
 }
 
 function urlGenerate() {
   const r = ollamaRoute()
-  return r.mode === 'vite-proxy' ? '/api/llm/ollama' : `${r.base}/api/generate`
+  return r.mode === 'bundled' ? bundledOllamaPath('generate') : `${r.base}/api/generate`
 }
 
 function urlTags() {
   const r = ollamaRoute()
-  return r.mode === 'vite-proxy' ? '/api/llm/ollama-tags' : `${r.base}/api/tags`
+  return r.mode === 'bundled' ? bundledOllamaPath('tags') : `${r.base}/api/tags`
 }
 
 /**
@@ -93,13 +117,17 @@ export const ollamaDefaults = {
 export async function listModels({ signal } = {}) {
   const res = await fetch(urlTags(), { signal })
   if (!res.ok) throw new Error(`Ollama tags ${res.status}: ${res.statusText}`)
-  const data = await res.json()
+  let data
+  try {
+    data = await res.json()
+  } catch {
+    throw new Error('Ollama tags: response was not JSON — check base URL or site /api/llm/ollama-tags proxy')
+  }
   const models = Array.isArray(data?.models) ? data.models : []
-  const usable = models
-    .map(m => m.name)
-    .filter(name => typeof name === 'string')
-    .filter(name => !/embed/i.test(name))
-    .filter(name => !/-base(?::|$)/i.test(name))
+  const names = models
+    .map(m => (typeof m?.name === 'string' && m.name) || (typeof m?.model === 'string' && m.model) || '')
+    .filter(Boolean)
+  const usable = [...new Set(names)].filter(name => !/embed/i.test(name))
   usable.sort()
   return usable
 }

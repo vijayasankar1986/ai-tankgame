@@ -138,7 +138,7 @@ export function mountSettingsPanel({ settings, saveSettings, resetToDefaults, on
     }
 
     if (hint) hint.textContent = '— loading…'
-    const { models, source } = await listModelsFor(providerId)
+    const { models, source, loadError } = await listModelsFor(providerId)
 
     // Always surface the saved value even if the live list doesn't contain
     // it (e.g. user typed a custom model previously, or Ollama is offline).
@@ -155,9 +155,20 @@ export function mountSettingsPanel({ settings, saveSettings, resetToDefaults, on
     select.value = full.includes(currentVal) ? currentVal : (full[0] || '')
 
     if (hint) {
-      if (source === 'live')        hint.textContent = `— ${models.length} installed via Ollama`
-      else if (source === 'static') hint.textContent = '— common models'
-      else                          hint.textContent = '— Ollama offline, keep previous value'
+      if (source === 'live') {
+        hint.textContent = `— ${models.length} installed via Ollama`
+      } else if (source === 'static') {
+        hint.textContent = '— common models'
+      } else if (providerId === 'ollama') {
+        const detail = loadError
+          ? (loadError.length > 140 ? `${loadError.slice(0, 140)}…` : loadError)
+          : ''
+        hint.textContent = detail
+          ? `— could not list models: ${detail}`
+          : '— could not list models — from https:// pages set Ollama base URL to an https:// tunnel (or host /api/llm/ollama-tags → Ollama); http:// game + empty URL uses this PC at :11434'
+      } else {
+        hint.textContent = '— offline, keep previous value'
+      }
     }
   }
 

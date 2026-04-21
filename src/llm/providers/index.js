@@ -35,26 +35,31 @@ export function isLLMController(id) {
 
 /**
  * Best-effort list of selectable models for a provider. Returns a Promise
- * resolving to { models: string[], source: 'live' | 'static' | 'fallback' }.
+ * resolving to
+ * `{ models, source: 'live' | 'static' | 'fallback', loadError?: string }`.
  * Never rejects — if a live query fails we fall back to static defaults.
  */
 export async function listModelsFor(providerId) {
   const p = PROVIDERS[providerId]
   if (!p) return { models: [], source: 'fallback' }
 
+  let loadError
   if (typeof p.listModels === 'function') {
     try {
       const models = await p.listModels()
       if (models.length) return { models, source: 'live' }
-    } catch {
-      // fall through to static list below
+    } catch (e) {
+      loadError = e instanceof Error ? e.message : String(e)
+      if (providerId === 'ollama') {
+        console.warn('[iron-warfare] Ollama /api/tags failed:', e)
+      }
     }
   }
 
   if (Array.isArray(p.models) && p.models.length) {
-    return { models: p.models, source: 'static' }
+    return { models: p.models, source: 'static', loadError }
   }
 
   const fallback = p.defaults?.model
-  return { models: fallback ? [fallback] : [], source: 'fallback' }
+  return { models: fallback ? [fallback] : [], source: 'fallback', loadError }
 }

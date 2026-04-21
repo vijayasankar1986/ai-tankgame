@@ -22,6 +22,9 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/llm\/ollama/, '/api/generate'),
       },
+      // Production https builds call these same paths from the browser; your
+      // host (nginx, Caddy, Cloudflare Tunnel, etc.) must mirror this mapping
+      // if you rely on empty Ollama base URL over https.
     },
   },
   build: {

@@ -41,7 +41,17 @@ export async function complete({ model, system, user, signal }) {
   if (typeof content !== 'string' || !content.trim()) {
     throw new Error('OpenAI: missing text response')
   }
-  return content
+  const inTok = Number(data?.usage?.prompt_tokens) || 0
+  const outTok = Number(data?.usage?.completion_tokens) || 0
+  const totalTok = Number(data?.usage?.total_tokens) || (inTok + outTok)
+  return {
+    text: content,
+    usage: {
+      inputTokens: inTok,
+      outputTokens: outTok,
+      totalTokens: totalTok,
+    },
+  }
 }
 
 export const openai = {

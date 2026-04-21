@@ -12,6 +12,7 @@ import { AIController, AI_STATE } from './AIController.js'
 import { getProvider }            from './llm/providers/index.js'
 import { SYSTEM_PROMPT, buildUserPrompt } from './llm/prompt.js'
 import { parseDirective }         from './llm/schema.js'
+import { estimateUsd }            from './llm/cost.js'
 
 export class LLMController {
   /**
@@ -50,6 +51,10 @@ export class LLMController {
     this.lastLatencyMs  = 0
     this.inFlight       = false
     this.lastError      = null
+    this.totalInputTokens = 0
+    this.totalOutputTokens = 0
+    this.totalTokens = 0
+    this.totalCostUsd = 0
 
     this.currentDirective = null
     this._lastTickTs      = 0
@@ -80,6 +85,10 @@ export class LLMController {
     this._errorBackoffMs = 0
     this._lastErrorKey = ''
     this._lastErrorLogTs = 0
+    this.totalInputTokens = 0
+    this.totalOutputTokens = 0
+    this.totalTokens = 0
+    this.totalCostUsd = 0
   }
 
   // ── Internal ──────────────────────────────────────────────────────────
@@ -125,25 +134,59 @@ export class LLMController {
     const { complete } = getProvider(this.providerId)
 
     const t0 = performance.now()
-    const raw = await complete({
+    const result = await complete({
       model:  this.model,
       system: this._composedSystemPrompt(),
       user,
     })
+    const raw = typeof result === 'string' ? result : result?.text
     const latencyMs = performance.now() - t0
 
     const directive = parseDirective(raw)
-    this.currentDirective = directive
+    const usage = result && typeof result === 'object' ? (result.usage || {}) : {}
+    const inputTokens = Number(usage.inputTokens) || 0
+    const outputTokens = Number(usage.outputTokens) || 0
+    const totalTokens = Number(usage.totalTokens) || (inputTokens + outputTokens)
+    const costUsd = estimateUsd({
+      providerId: this.providerId,
+      model: this.model,
+      inputTokens,
+      outputTokens,
+    })
+    const safeAggression = Math.max(0.15, Math.min(1, Number(directive?.aggression) || this._baseAggression))
+    this.currentDirective = {
+      ...directive,
+      aggression: safeAggression,
+    }
     this.lastLatencyMs    = latencyMs
     this.callCount       += 1
     this.lastError        = null
+    this.totalInputTokens += inputTokens
+    this.totalOutputTokens += outputTokens
+    this.totalTokens += totalTokens
+    this.totalCostUsd += costUsd
     this._errorBackoffMs  = 0
     this._nextAllowedTickTs = 0
     this._lastErrorKey    = ''
     this._lastErrorLogTs  = 0
     // Apply aggression override for scripted fallback behavior too.
-    this.ai.aggressionLevel = directive.aggression
-    this.onThinking(directive, { latencyMs, callCount: this.callCount })
+    this.ai.aggressionLevel = safeAggression
+    this.onThinking(this.currentDirective, {
+      latencyMs,
+      callCount: this.callCount,
+      usage: {
+        inputTokens,
+        outputTokens,
+        totalTokens,
+        costUsd,
+      },
+      totals: {
+        inputTokens: this.totalInputTokens,
+        outputTokens: this.totalOutputTokens,
+        totalTokens: this.totalTokens,
+        costUsd: this.totalCostUsd,
+      },
+    })
   }
 
   _applyDirective(base, self, enemy) {

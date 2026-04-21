@@ -29,6 +29,10 @@ export class UI {
     this.$scoreRedLbl   = document.getElementById('scoreRedLbl')
     this.$scoreBlueLbl  = document.getElementById('scoreBlueLbl')
     this._teams = { red: { name: 'ALPHA' }, blue: { name: 'BRAVO' } }
+    this._lastLogByFaction = {
+      red: { msg: '', ts: 0 },
+      blue: { msg: '', ts: 0 },
+    }
   }
 
   /** Update all team-name + color driven UI from a settings object. */
@@ -109,6 +113,13 @@ export class UI {
    * @param {string} type  css class suffix: 'red'|'blue'|'sys'|'hit'|'danger'
    */
   log(faction, msg, type = '') {
+    const now = Date.now()
+    const last = this._lastLogByFaction[faction]
+    if (last && last.msg === msg && (now - last.ts) < 900) return
+    if (last) {
+      last.msg = msg
+      last.ts = now
+    }
     const el = faction === 'red' ? this.$redLog : this.$blueLog
     const entry = document.createElement('div')
     entry.className = `log-entry ${type || faction}`

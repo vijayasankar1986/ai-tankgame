@@ -68,7 +68,17 @@ export async function complete({ model, system, user, signal }) {
     if (typeof out !== 'string' || !out.trim()) {
       throw new Error(`Gemini: missing text response from "${candidate}"`)
     }
-    return out
+    const inTok = Number(data?.usageMetadata?.promptTokenCount) || 0
+    const outTok = Number(data?.usageMetadata?.candidatesTokenCount) || 0
+    const totalTok = Number(data?.usageMetadata?.totalTokenCount) || (inTok + outTok)
+    return {
+      text: out,
+      usage: {
+        inputTokens: inTok,
+        outputTokens: outTok,
+        totalTokens: totalTok,
+      },
+    }
   }
 
   throw lastErr || new Error('Gemini: no usable model response')

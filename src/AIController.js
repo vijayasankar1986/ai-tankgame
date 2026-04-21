@@ -200,9 +200,9 @@ export class AIController {
     const now = Date.now()
     let logMsg = null
     const logInterval = {
-      [AI_STATE.ADVANCE]:  200,
-      [AI_STATE.ATTACK]:   300,
-      [AI_STATE.STRAFE]:   250,
+      [AI_STATE.ADVANCE]:  1100,
+      [AI_STATE.ATTACK]:   800,
+      [AI_STATE.STRAFE]:   900,
       // Retreat can persist for long stretches; keep this less chatty.
       [AI_STATE.RETREAT]:  1800,
     }[this.state] ?? 500

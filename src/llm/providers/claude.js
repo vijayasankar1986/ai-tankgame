@@ -48,7 +48,16 @@ export async function complete({ model, system, user, signal }) {
   if (typeof out !== 'string' || !out.trim()) {
     throw new Error('Claude: missing text response')
   }
-  return out
+  const inTok = Number(data?.usage?.input_tokens) || 0
+  const outTok = Number(data?.usage?.output_tokens) || 0
+  return {
+    text: out,
+    usage: {
+      inputTokens: inTok,
+      outputTokens: outTok,
+      totalTokens: inTok + outTok,
+    },
+  }
 }
 
 export const claude = {

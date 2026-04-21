@@ -11,6 +11,7 @@ import { createObstacles, drawObstacles, drawGround }    from './ObstacleMap.js'
 import { HumanController }                               from './HumanController.js'
 import { LLMController }                                 from './LLMController.js'
 import { isLLMController }                               from './llm/providers/index.js'
+import { formatUsd }                                     from './llm/cost.js'
 import { settings, saveSettings, resetToDefaults }       from './Settings.js'
 import { mountSettingsPanel }                            from './SettingsPanel.js'
 
@@ -34,6 +35,7 @@ let roundNum        = 1
 let animId
 let simStep         = 0
 let autoNextTimer   = null
+let battlesFinished = 0
 
 // Match timer (counts down while gameRunning)
 let matchTimeLeft   = MATCH_DURATION_MS
@@ -147,12 +149,16 @@ function wireAiControllers() {
         // change every interval, and latency dips/spikes match real RTT.
         const ms      = Math.round(meta?.latencyMs ?? 0)
         const n       = meta?.callCount ?? 0
+        const callTok = Number(meta?.usage?.totalTokens) || 0
+        const callUsd = Number(meta?.usage?.costUsd) || 0
+        const totTok  = Number(meta?.totals?.totalTokens) || 0
+        const totUsd  = Number(meta?.totals?.costUsd) || 0
         const shownReasoning = agent.showReasoning && d.reasoning
           ? d.reasoning.slice(0, 72)
           : ''
         const suffix  = shownReasoning ? ` — ${shownReasoning}` : ''
         ui.log(teamKey,
-          `[${t.controller.toUpperCase()} · ${agent.model} · #${n} · ${ms}ms] ${d.goal} (agg ${d.aggression.toFixed(2)})${suffix}`,
+          `[${t.controller.toUpperCase()} · ${agent.model} · #${n} · ${ms}ms · tok ${callTok} · ${formatUsd(callUsd)} · total ${totTok} / ${formatUsd(totUsd)}] ${d.goal} (agg ${d.aggression.toFixed(2)})${suffix}`,
           'sys')
       },
       onError: (err) => {
@@ -425,6 +431,8 @@ function startNextRound() {
 }
 
 function finishRound(winner, subtitle, header) {
+  battlesFinished += 1
+  logBattleSummary()
   if (settings.match.autoNextRound) {
     ui.hideOverlay()
     // Small delay so round-end effects/logs remain visible briefly.
@@ -436,6 +444,22 @@ function finishRound(winner, subtitle, header) {
     return
   }
   ui.showWinner(winner, subtitle, header)
+}
+
+function teamCostSummary(teamKey) {
+  const t = settings.teams[teamKey]
+  const tank = teamKey === 'red' ? redTank : blueTank
+  if (!isLLMController(t.controller) || !tank?.ai?.isLLM) {
+    return `${t.name}: non-LLM`
+  }
+  const ai = tank.ai
+  return `${t.name}: ${t.controller}/${ai.model} calls ${ai.callCount} tok ${ai.totalTokens} cost ${formatUsd(ai.totalCostUsd)}`
+}
+
+function logBattleSummary() {
+  const line = `BATTLE ${battlesFinished} SUMMARY — ${teamCostSummary('red')} | ${teamCostSummary('blue')}`
+  ui.log('red', line, 'sys')
+  ui.log('blue', line, 'sys')
 }
 
 function endRound(winner, reason = 'tank') {
@@ -574,6 +598,7 @@ function fullReset() {
   scoreRed = 0
   scoreBlue = 0
   roundNum = 1
+  battlesFinished = 0
   MATCH_DURATION_MS = settings.match.durationSec * 1000
   redTank.kills = 0
   blueTank.kills = 0

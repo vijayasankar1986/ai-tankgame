@@ -58,6 +58,7 @@ export class Tank {
     this._stuckFrames   = 0
     this._unstickFrames = 0
     this._unstickDir    = 1
+    this._unstickMode   = 'strafe'
   }
 
   get alive()        { return this.hp > 0 }
@@ -96,7 +97,8 @@ export class Tank {
     let moveDir = decision.moveDir
     if (this._unstickFrames > 0 && moveDir !== null) {
       this._unstickFrames--
-      moveDir = moveDir + Math.PI / 2 * this._unstickDir
+      if (this._unstickMode === 'reverse') moveDir = moveDir + Math.PI
+      else moveDir = moveDir + Math.PI / 2 * this._unstickDir
       decision.rotateTo = moveDir
     }
 
@@ -128,10 +130,12 @@ export class Tank {
       if (moved < 0.25) {
         this._stuckFrames++
         if (this._stuckFrames > 14 && this._unstickFrames <= 0) {
-          this._unstickFrames = 12
+          const severe = this._stuckFrames > 28
+          this._unstickMode = severe ? 'reverse' : 'strafe'
+          this._unstickFrames = severe ? 18 : 12
           this._unstickDir = Math.random() < 0.5 ? -1 : 1
           this._stuckFrames = 0
-          this.onLog(this.isRed ? 'red' : 'blue', 'AUTO-UNSTICK MANEUVER', 'sys')
+          this.onLog(this.isRed ? 'red' : 'blue', severe ? 'AUTO-UNSTICK MANEUVER (REVERSE)' : 'AUTO-UNSTICK MANEUVER', 'sys')
         }
       } else {
         this._stuckFrames = 0
@@ -357,5 +361,6 @@ export class Tank {
     this._stuckFrames   = 0
     this._unstickFrames = 0
     this._unstickDir    = 1
+    this._unstickMode   = 'strafe'
   }
 }

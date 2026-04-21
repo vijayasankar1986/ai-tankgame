@@ -105,7 +105,16 @@ export async function complete({ model, system, user, signal }) {
   if (typeof data?.response !== 'string') {
     throw new Error('Ollama: missing response field')
   }
-  return data.response
+  const inTok = Number(data?.prompt_eval_count) || 0
+  const outTok = Number(data?.eval_count) || 0
+  return {
+    text: data.response,
+    usage: {
+      inputTokens: inTok,
+      outputTokens: outTok,
+      totalTokens: inTok + outTok,
+    },
+  }
 }
 
 export const ollamaDefaults = {

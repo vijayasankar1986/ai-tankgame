@@ -335,13 +335,13 @@ function formatTime(ms) {
 
 function drawHUD() {
   const dist = Math.hypot(redTank.x - blueTank.x, redTank.y - blueTank.y)
-  ctx.font      = '10px "Share Tech Mono"'
-  ctx.fillStyle = '#374151'
+  ctx.font      = '11px "Share Tech Mono"'
+  ctx.fillStyle = '#c5d0e0'
   ctx.fillText(`RANGE: ${dist.toFixed(0)}px`, W / 2 - 40, H - 8)
 
   // Match-type indicator — bottom-left
-  ctx.font      = 'bold 10px "Orbitron"'
-  ctx.fillStyle = isKingMode() ? '#ffc107' : '#4b5563'
+  ctx.font      = 'bold 11px "Orbitron"'
+  ctx.fillStyle = isKingMode() ? '#ffc107' : '#a8b8d0'
   ctx.fillText(isKingMode() ? '◆ PROTECT THE KING' : '◆ DEATHMATCH', 10, H - 8)
 
   // Countdown timer — top-center of canvas
@@ -354,8 +354,8 @@ function drawHUD() {
   ctx.shadowBlur  = warning ? 12 : 6
   ctx.fillText(timeStr, W / 2, 22)
   ctx.shadowBlur = 0
-  ctx.font      = '9px "Share Tech Mono"'
-  ctx.fillStyle = '#4a5568'
+  ctx.font      = '10px "Share Tech Mono"'
+  ctx.fillStyle = '#8fa3bd'
   ctx.fillText('MATCH TIMER', W / 2, 34)
   ctx.textAlign = 'left'
 }

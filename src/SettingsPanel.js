@@ -40,9 +40,97 @@ export function mountSettingsPanel({ settings, saveSettings, resetToDefaults, on
   if (!overlay || !openBtn) return
 
   const inputs = Array.from(overlay.querySelectorAll('[data-setting]'))
+  const ollamaConnectBtn = overlay.querySelector('#btnOllamaConnect')
+  const ollamaCopyFixBtn = overlay.querySelector('#btnOllamaCopyFix')
+  const ollamaStatusEl   = overlay.querySelector('#ollamaConnectionStatus')
+  const OLLAMA_NGINX_FIX = `location = /api/ollama-tags {
+  proxy_pass http://127.0.0.1:11434/api/tags;
+  proxy_http_version 1.1;
+  proxy_set_header Host localhost;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+
+location = /api/ollama-generate {
+  proxy_pass http://127.0.0.1:11434/api/generate;
+  proxy_http_version 1.1;
+  proxy_set_header Host localhost;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_read_timeout 300s;
+  proxy_buffering off;
+}`
 
   // Snapshot of settings when the panel was opened so Cancel restores them.
   let snapshot = null
+
+  function setOllamaStatus(kind, message) {
+    if (!ollamaStatusEl) return
+    ollamaStatusEl.className = `ollama-connection-status ${kind}`
+    ollamaStatusEl.textContent = message
+  }
+
+  function toggleCopyFixBtn(show) {
+    if (!ollamaCopyFixBtn) return
+    ollamaCopyFixBtn.classList.toggle('show', !!show)
+  }
+
+  function isRouteMismatchError(err) {
+    const msg = (err instanceof Error ? err.message : String(err || '')).toLowerCase()
+    return msg.includes('405')
+  }
+
+  function formatOllamaError(err, baseUrl) {
+    const msg = (err instanceof Error ? err.message : String(err || '')).toLowerCase()
+    if (msg.includes('405')) {
+      return 'Server route mismatch (405). Map /api/ollama-tags to /api/tags and /api/ollama-generate to /api/generate.'
+    }
+    if (msg.includes('not json')) {
+      return 'Connected to a non-Ollama endpoint. Please check your Ollama URL/proxy.'
+    }
+    if (msg.includes('failed to fetch') || msg.includes('networkerror')) {
+      if (!baseUrl && window.location.protocol === 'https:') {
+        return 'Cannot reach local Ollama from HTTPS page. Use an HTTPS tunnel/proxy URL.'
+      }
+      return 'Cannot reach Ollama. Check URL, tunnel/proxy, and that Ollama is running.'
+    }
+    if (msg.includes('404')) {
+      return 'Ollama endpoint not found (404). Verify your base URL points to Ollama root.'
+    }
+    return 'Connection failed. Verify Ollama is running and the URL/proxy is correct.'
+  }
+
+  async function testOllamaConnection() {
+    const baseInput = overlay.querySelector('[data-setting="llm.ollamaBaseUrl"]')
+    const draftBase = (baseInput?.value ?? '').trim()
+    const prevBase = settings.llm?.ollamaBaseUrl ?? ''
+
+    setOllamaStatus('pending', 'Checking connection...')
+    toggleCopyFixBtn(false)
+    if (ollamaConnectBtn) ollamaConnectBtn.disabled = true
+
+    try {
+      // Test against current typed value even before Apply.
+      settings.llm.ollamaBaseUrl = draftBase
+      const { models, source, loadError } = await listModelsFor('ollama')
+      if (source === 'live' && models.length > 0) {
+        const shown = models.slice(0, 3).join(', ')
+        const more = models.length > 3 ? ` +${models.length - 3} more` : ''
+        setOllamaStatus('ok', `Connected: ${models.length} model(s) found (${shown}${more}).`)
+      } else if (loadError) {
+        toggleCopyFixBtn(isRouteMismatchError(loadError))
+        setOllamaStatus('error', formatOllamaError(loadError, draftBase))
+      } else {
+        setOllamaStatus('warn', 'Connected, but no usable models were found in /api/tags.')
+      }
+    } catch (e) {
+      toggleCopyFixBtn(isRouteMismatchError(e))
+      setOllamaStatus('error', formatOllamaError(e, draftBase))
+    } finally {
+      settings.llm.ollamaBaseUrl = prevBase
+      if (ollamaConnectBtn) ollamaConnectBtn.disabled = false
+    }
+  }
 
   function loadFromSettings() {
     // Rebind BEFORE reading values so the llm-only fields point at the
@@ -184,6 +272,8 @@ export function mountSettingsPanel({ settings, saveSettings, resetToDefaults, on
     snapshot = JSON.parse(JSON.stringify(settings))
     loadFromSettings()
     overlay.classList.add('show')
+    setOllamaStatus('idle', 'Not tested yet.')
+    toggleCopyFixBtn(false)
   }
 
   function close() {
@@ -263,5 +353,15 @@ export function mountSettingsPanel({ settings, saveSettings, resetToDefaults, on
   // Esc to cancel
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && overlay.classList.contains('show')) cancel()
+  })
+
+  ollamaConnectBtn?.addEventListener('click', testOllamaConnection)
+  ollamaCopyFixBtn?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(OLLAMA_NGINX_FIX)
+      setOllamaStatus('ok', 'Nginx proxy fix copied. Paste it into your server config and reload nginx.')
+    } catch {
+      setOllamaStatus('warn', 'Could not copy automatically. Use deploy/nginx-ollama-proxy.example.conf.')
+    }
   })
 }

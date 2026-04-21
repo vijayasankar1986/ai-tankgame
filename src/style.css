@@ -471,6 +471,40 @@ canvas {
 /* Make the Layout field span the full row so the hint fits on one line. */
 .settings-field-wide { grid-column: 1 / -1; }
 
+.ollama-connect-row {
+  margin-top: -2px;
+}
+
+.ollama-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ollama-actions .btn {
+  min-width: 150px;
+}
+
+.ollama-copy-fix {
+  display: none;
+}
+
+.ollama-copy-fix.show {
+  display: inline-block;
+}
+
+.ollama-connection-status {
+  font-size: 0.64rem;
+  letter-spacing: 0.5px;
+  color: var(--text-subtle);
+}
+
+.ollama-connection-status.pending { color: var(--accent-cyan); }
+.ollama-connection-status.ok      { color: var(--green); }
+.ollama-connection-status.warn    { color: var(--gold); }
+.ollama-connection-status.error   { color: var(--red); }
+
 .settings-hint {
   font-style: normal;
   font-size: 0.62rem;

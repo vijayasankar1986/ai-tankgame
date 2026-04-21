@@ -20,6 +20,7 @@ The codebase is structured so sensor-driven control (for example **ROS 2** or **
 
 ```
 ai-tankgame/
+├── .nvmrc                    # Node 20 for CI / Cloudflare Pages
 ├── index.html                 # Shell: canvas, HUD, settings modal
 ├── package.json
 ├── vite.config.js             # Dev server (port 3000) + Ollama proxy
@@ -91,3 +92,21 @@ npm run build
 ```
 
 Output is in `dist/`. Deploy as static files, or run `npm run preview` to verify the build locally.
+
+---
+
+## Deploy to Cloudflare Pages
+
+Use [Pages Git integration](https://developers.cloudflare.com/pages/get-started/guide/) so every push to `main` rebuilds the site.
+
+1. In the [Cloudflare dashboard](https://dash.cloudflare.com/?to=/:account/workers-and-pages), choose **Create application** → **Pages** → **Connect to Git**, then authorize GitHub and select [vijayasankar1986/ai-tankgame](https://github.com/vijayasankar1986/ai-tankgame).
+2. Set the **production branch** to `main`.
+3. Under **Set up builds and deployments** ([build configuration](https://developers.cloudflare.com/pages/configuration/build-configuration/)):
+   - **Framework preset**: **React (Vite)** (same as plain Vite: `npm run build` → `dist`), or **None** with the fields below.
+   - **Build command**: `npm run build`
+   - **Build output directory**: `dist`
+   - **Root directory**: `/` (repository root)
+
+Optional: in the project **Settings** → **Environment variables**, set `NODE_VERSION` to `20` if the build image does not already pick up the repo [`.nvmrc`](.nvmrc).
+
+**Ollama on the hosted site:** Pages serves the game over **HTTPS**. Browsers block mixed content, so calls to `http://127.0.0.1:11434` or plain `http://` Ollama from that page will not work. **Auto** and **Human** work as usual. For **Ollama** in production you need an **HTTPS** endpoint (tunnel or proxy) and must set **Ollama base URL** in the in-game Settings.

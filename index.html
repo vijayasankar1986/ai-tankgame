@@ -4,6 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IRON WARFARE — AI vs AI</title>
+  <script>
+    (function () {
+      var t = 'light'
+      try {
+        var s = localStorage.getItem('iron-warfare-theme')
+        if (s === 'dark') t = 'dark'
+      } catch (e) {}
+      document.documentElement.setAttribute('data-theme', t)
+    })()
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/src/style.css" />
@@ -13,7 +23,18 @@
 <header>
   <div class="logo">⚔ IRON WARFARE</div>
   <div class="header-status">● SIMULATION ACTIVE</div>
-  <div class="header-version">AI v1.4.2</div>
+  <div class="header-end">
+    <button type="button" class="btn-theme" id="btnTheme" aria-label="Switch theme" title="Theme">
+      <svg class="theme-icon theme-icon-sun" xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <circle cx="12" cy="12" r="4" />
+        <path stroke-linecap="round" d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+      </svg>
+      <svg class="theme-icon theme-icon-moon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+      </svg>
+    </button>
+    <div class="header-version">AI v1.4.2</div>
+  </div>
 </header>
 
 <div class="main-wrap">

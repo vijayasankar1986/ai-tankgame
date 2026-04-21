@@ -2,6 +2,7 @@
 // Entry point for IRON WARFARE
 
 import './style.css'
+import { initTheme }                                     from './theme.js'
 import { Tank }                                          from './Tank.js'
 import { King }                                          from './King.js'
 import { ParticleSystem }                                from './Particle.js'
@@ -12,6 +13,8 @@ import { LLMController }                                 from './LLMController.j
 import { isLLMController }                               from './llm/providers/index.js'
 import { settings, saveSettings, resetToDefaults }       from './Settings.js'
 import { mountSettingsPanel }                            from './SettingsPanel.js'
+
+initTheme()
 
 // ── Canvas setup ──────────────────────────────────────────────────────────────
 const canvas = document.getElementById('gameCanvas')

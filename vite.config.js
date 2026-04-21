@@ -9,22 +9,22 @@ export default defineConfig({
       // Ollama listens on :11434 by default with no auth, so we just
       // rewrite the path and forward. No API key ever touches the browser.
       //
-      // NOTE: more specific routes MUST come first — Vite's proxy matches
-      // by prefix in declaration order, so /api/llm/ollama-tags has to be
-      // registered before /api/llm/ollama or it would be shadowed.
-      '/api/llm/ollama-tags': {
+      // Use paths that are NOT prefix-related: `/api/llm/ollama` matched
+      // `/api/llm/ollama-tags` on many nginx configs, sending GET /tags to
+      // /api/generate → Ollama 405. See /api/ollama-tags + /api/ollama-generate.
+      '/api/ollama-tags': {
         target: 'http://localhost:11434',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/llm\/ollama-tags/, '/api/tags'),
+        rewrite: (path) => path.replace(/^\/api\/ollama-tags/, '/api/tags'),
       },
-      '/api/llm/ollama': {
+      '/api/ollama-generate': {
         target: 'http://localhost:11434',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/llm\/ollama/, '/api/generate'),
+        rewrite: (path) => path.replace(/^\/api\/ollama-generate/, '/api/generate'),
       },
-      // Production https builds call these same paths from the browser; your
-      // host (nginx, Caddy, Cloudflare Tunnel, etc.) must mirror this mapping
-      // if you rely on empty Ollama base URL over https.
+      // Production: copy deploy/nginx-ollama-proxy.example.conf into nginx
+      // (https + empty Ollama base URL). Do not use /api/llm/ollama* — nginx
+      // prefix matching sent /ollama-tags to /generate → 405.
     },
   },
   build: {

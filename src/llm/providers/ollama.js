@@ -2,12 +2,12 @@
 //
 // URL routing:
 //   • `npm run dev` + empty `settings.llm.ollamaBaseUrl` → POST/GET to
-//     `/api/llm/ollama` and `/api/llm/ollama-tags` (Vite proxies to the
+//     `/api/ollama-generate` and `/api/ollama-tags` (Vite proxies to the
 //     machine where Vite runs — usually your dev PC).
 //   • `vite build` + **http:** page + empty base → `http://127.0.0.1:11434`
 //     (visitor's browser → that visitor's Ollama; needs OLLAMA_ORIGINS CORS).
 //   • `vite build` + **https:** page + empty base → same-origin
-//     `/api/llm/ollama-tags` (like dev). The host must reverse-proxy those
+//     `/api/ollama-tags` (like dev). The host must reverse-proxy those
 //     paths to Ollama, **or** set `ollamaBaseUrl` to an **https://** URL that
 //     reaches your Ollama (tunnel / LAN proxy). Browsers block http://127.0.0.1
 //     from https pages (mixed content).
@@ -27,7 +27,10 @@ import { settings } from '../../Settings.js'
  * @param {'tags' | 'generate'} kind
  */
 function bundledOllamaPath(kind) {
-  const seg = kind === 'tags' ? 'api/llm/ollama-tags' : 'api/llm/ollama'
+  // Paths must NOT share a prefix (e.g. /api/llm/ollama vs /api/llm/ollama-tags):
+  // many reverse proxies match the shorter prefix and GET /tags was sent to
+  // /api/generate → Ollama 405 Method Not Allowed.
+  const seg = kind === 'tags' ? 'api/ollama-tags' : 'api/ollama-generate'
   const base = import.meta.env.BASE_URL || '/'
   if (typeof window !== 'undefined') {
     try {
@@ -121,7 +124,7 @@ export async function listModels({ signal } = {}) {
   try {
     data = await res.json()
   } catch {
-    throw new Error('Ollama tags: response was not JSON — check base URL or site /api/llm/ollama-tags proxy')
+    throw new Error('Ollama tags: response was not JSON — check base URL or site /api/ollama-tags proxy')
   }
   const models = Array.isArray(data?.models) ? data.models : []
   const names = models

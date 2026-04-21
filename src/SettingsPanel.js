@@ -165,7 +165,7 @@ export function mountSettingsPanel({ settings, saveSettings, resetToDefaults, on
           : ''
         hint.textContent = detail
           ? `— could not list models: ${detail}`
-          : '— could not list models — from https:// pages set Ollama base URL to an https:// tunnel (or host /api/llm/ollama-tags → Ollama); http:// game + empty URL uses this PC at :11434'
+          : '— could not list models — from https:// pages set Ollama base URL to an https:// tunnel (or proxy /api/ollama-tags → Ollama /api/tags); http:// game + empty URL uses this PC at :11434'
       } else {
         hint.textContent = '— offline, keep previous value'
       }

@@ -1,7 +1,9 @@
 // llm/providers/index.js — Provider registry.
 
 import { complete as ollamaComplete, ollamaDefaults, listModels as listOllamaModels } from './ollama.js'
-import { openai, claude, gemini }                                                     from './stubs.js'
+import { openai }                                                                      from './openai.js'
+import { claude }                                                                      from './claude.js'
+import { gemini }                                                                      from './gemini.js'
 
 /**
  * Map of provider id → { complete(args), defaults, models?, listModels?() }.

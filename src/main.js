@@ -32,6 +32,8 @@ let scoreRed        = 0
 let scoreBlue       = 0
 let roundNum        = 1
 let animId
+let simStep         = 0
+let autoNextTimer   = null
 
 // Match timer (counts down while gameRunning)
 let matchTimeLeft   = MATCH_DURATION_MS
@@ -198,10 +200,12 @@ blueHuman.attachJoystick(
 // controller selection. For LLM providers we surface the provider name so
 // the spectator knows "this isn't the scripted AI, this is Ollama talking".
 function aiToggleLabel(teamKey) {
-  const c = settings.teams[teamKey].controller
+  const team = settings.teams[teamKey]
+  const c = team.controller
   if (c === 'human') return 'HUMAN'
-  if (c === 'auto')  return 'AI: AUTO'
-  return `AI: ${c.toUpperCase()}`
+  if (c === 'auto')  return 'GAME ENGINER AUTO'
+  const model = team.agents?.[c]?.model
+  return model ? `AI: ${c.toUpperCase()} · ${model}` : `AI: ${c.toUpperCase()}`
 }
 
 function setAiActive(tank, human, isAi, toggleBtn, panelEl) {
@@ -270,62 +274,43 @@ function respawnTank(tank, side) {
   ui.log(side, 'RESPAWNED — HULL REPAIRED', 'sys')
 }
 
-function checkBulletHits() {
+function checkBulletHits(redFirst = true) {
   const king = isKingMode()
+  const scanSide = (attacker, defender, attackerSide, defenderSide, defenderKing) => {
+    attacker.bullets.forEach(b => {
+      if (!b.active) return
 
-  // Bullets from red  → blue tank + blue king
-  redTank.bullets.forEach(b => {
-    if (!b.active) return
-
-    if (bulletHitsTank(b, blueTank.x, blueTank.y, 18)) {
-      const dead = blueTank.takeDamage(b.damage)
-      b.active = false
-      particles.spawn(b.x, b.y, '#44aaff', 10)
-      ui.log('blue', `HIT ${blueTank.hitsTaken} / ${blueTank.maxHits} — -${b.damage.toFixed(0)} HP`, 'hit')
-      ui.log('red',  `ENEMY HIT (${blueTank.hitsTaken}/${blueTank.maxHits})`, 'hit')
-      if (dead) {
-        if (king) respawnTank(blueTank, 'blue')
-        else      endRound('red')
+      if (bulletHitsTank(b, defender.x, defender.y, 18)) {
+        const dead = defender.takeDamage(b.damage)
+        b.active = false
+        particles.spawn(b.x, b.y, defenderSide === 'blue' ? '#44aaff' : '#ff4444', 10)
+        ui.log(defenderSide, `HIT ${defender.hitsTaken} / ${defender.maxHits} — -${b.damage.toFixed(0)} HP`, 'hit')
+        ui.log(attackerSide, `ENEMY HIT (${defender.hitsTaken}/${defender.maxHits})`, 'hit')
+        if (dead) {
+          if (king) respawnTank(defender, defenderSide)
+          else      endRound(attackerSide)
+        }
+        return
       }
-      return
-    }
 
-    if (king && blueKing.alive && bulletHitsTank(b, blueKing.x, blueKing.y, blueKing.radius)) {
-      const kingDead = blueKing.takeDamage(b.damage)
-      b.active = false
-      particles.spawn(b.x, b.y, blueKing.color, kingDead ? 30 : 12)
-      ui.log('blue', `KING HIT — ${blueKing.hp}/${blueKing.maxHp} HP`, 'danger')
-      ui.log('red',  `ENEMY KING ${blueKing.hp}/${blueKing.maxHp} HP`, 'hit')
-      if (kingDead) endRound('red', 'king')
-    }
-  })
-
-  // Bullets from blue → red tank + red king
-  blueTank.bullets.forEach(b => {
-    if (!b.active) return
-
-    if (bulletHitsTank(b, redTank.x, redTank.y, 18)) {
-      const dead = redTank.takeDamage(b.damage)
-      b.active = false
-      particles.spawn(b.x, b.y, '#ff4444', 10)
-      ui.log('red',  `HIT ${redTank.hitsTaken} / ${redTank.maxHits} — -${b.damage.toFixed(0)} HP`, 'hit')
-      ui.log('blue', `ENEMY HIT (${redTank.hitsTaken}/${redTank.maxHits})`, 'hit')
-      if (dead) {
-        if (king) respawnTank(redTank, 'red')
-        else      endRound('blue')
+      if (king && defenderKing.alive && bulletHitsTank(b, defenderKing.x, defenderKing.y, defenderKing.radius)) {
+        const kingDead = defenderKing.takeDamage(b.damage)
+        b.active = false
+        particles.spawn(b.x, b.y, defenderKing.color, kingDead ? 30 : 12)
+        ui.log(defenderSide, `KING HIT — ${defenderKing.hp}/${defenderKing.maxHp} HP`, 'danger')
+        ui.log(attackerSide, `ENEMY KING ${defenderKing.hp}/${defenderKing.maxHp} HP`, 'hit')
+        if (kingDead) endRound(attackerSide, 'king')
       }
-      return
-    }
+    })
+  }
 
-    if (king && redKing.alive && bulletHitsTank(b, redKing.x, redKing.y, redKing.radius)) {
-      const kingDead = redKing.takeDamage(b.damage)
-      b.active = false
-      particles.spawn(b.x, b.y, redKing.color, kingDead ? 30 : 12)
-      ui.log('red',  `KING HIT — ${redKing.hp}/${redKing.maxHp} HP`, 'danger')
-      ui.log('blue', `ENEMY KING ${redKing.hp}/${redKing.maxHp} HP`, 'hit')
-      if (kingDead) endRound('blue', 'king')
-    }
-  })
+  if (redFirst) {
+    scanSide(redTank,  blueTank, 'red',  'blue', blueKing)
+    scanSide(blueTank, redTank,  'blue', 'red',  redKing)
+  } else {
+    scanSide(blueTank, redTank,  'blue', 'red',  redKing)
+    scanSide(redTank,  blueTank, 'red',  'blue', blueKing)
+  }
 }
 
 // ── HUD ────────────────────────────────────────────────────────────────────
@@ -391,9 +376,15 @@ function gameLoop(ts) {
       endRoundByTime()
     } else {
       for (let s = 0; s < speedMultiplier; s++) {
-        redTank.update(blueTank, obstacles)
-        blueTank.update(redTank, obstacles)
-        checkBulletHits()
+        const redFirst = (simStep++ % 2) === 0
+        if (redFirst) {
+          redTank.update(blueTank, obstacles)
+          blueTank.update(redTank, obstacles)
+        } else {
+          blueTank.update(redTank, obstacles)
+          redTank.update(blueTank, obstacles)
+        }
+        checkBulletHits(redFirst)
       }
     }
   }
@@ -421,6 +412,29 @@ function clearBullets() {
   blueTank.bullets.length = 0
 }
 
+function startNextRound() {
+  ui.hideOverlay()
+  roundNum++
+  resetRound()
+  gameRunning = true
+  ui.log('red',  `ROUND ${roundNum} — DEPLOYING`, 'sys')
+  ui.log('blue', `ROUND ${roundNum} — DEPLOYING`, 'sys')
+}
+
+function finishRound(winner, subtitle, header) {
+  if (settings.match.autoNextRound) {
+    ui.hideOverlay()
+    // Small delay so round-end effects/logs remain visible briefly.
+    if (autoNextTimer) clearTimeout(autoNextTimer)
+    autoNextTimer = setTimeout(() => {
+      autoNextTimer = null
+      startNextRound()
+    }, 350)
+    return
+  }
+  ui.showWinner(winner, subtitle, header)
+}
+
 function endRound(winner, reason = 'tank') {
   gameRunning = false
   clearBullets()
@@ -438,7 +452,7 @@ function endRound(winner, reason = 'tank') {
       ui.log('blue', 'ENEMY KING DESTROYED — VICTORY', 'hit')
       ui.log('red',  'KING FALLEN — DEFEAT',           'danger')
     }
-    ui.showWinner(winner, 'ENEMY KING DESTROYED', '◆ THE KING IS DEAD ◆')
+    finishRound(winner, 'ENEMY KING DESTROYED', '◆ THE KING IS DEAD ◆')
     return
   }
 
@@ -457,7 +471,7 @@ function endRound(winner, reason = 'tank') {
     ui.log('red',  'HULL BREACH — DESTROYED',      'danger')
   }
 
-  ui.showWinner(winner, 'HULL INTEGRITY ZERO')
+  finishRound(winner, 'HULL INTEGRITY ZERO')
 }
 
 // Called when the 2-minute timer hits zero. Winner tiebreaker depends on mode.
@@ -472,21 +486,21 @@ function endRoundByTime() {
     const redKingLeft  = redKing.hp
     const blueKingLeft = blueKing.hp
     if (redKingLeft === blueKingLeft) {
-      ui.showWinner('draw', 'TIME UP — KINGS EQUAL', '◆ STALEMATE ◆')
+      finishRound('draw', 'TIME UP — KINGS EQUAL', '◆ STALEMATE ◆')
       return
     }
     const winner = blueKingLeft < redKingLeft ? 'red' : 'blue'
     if (winner === 'red') scoreRed++; else scoreBlue++
     ui.log(winner,                  `TIME VICTORY — KINGS ${redKingLeft} vs ${blueKingLeft}`, 'hit')
     ui.log(winner === 'red' ? 'blue' : 'red', 'KING OUTLASTED — DEFEAT', 'danger')
-    ui.showWinner(winner,
+    finishRound(winner,
       `TIME UP — ${winner === 'red' ? blueKingLeft : redKingLeft} HP LEFT ON ENEMY KING`,
       '◆ THE KING STANDS ◆')
     return
   }
 
   if (redTank.hp === blueTank.hp) {
-    ui.showWinner('draw', 'TIME UP — STALEMATE')
+    finishRound('draw', 'TIME UP — STALEMATE')
     return
   }
 
@@ -500,7 +514,7 @@ function endRoundByTime() {
     ui.log('blue', `TIME VICTORY — HP ${blueTank.hp} vs ${redTank.hp}`, 'hit')
     ui.log('red',  'OUTLASTED — DEFEAT', 'danger')
   }
-  ui.showWinner(winner, `TIME UP — WINNER BY HP (${Math.max(redTank.hp, blueTank.hp)} HP)`)
+  finishRound(winner, `TIME UP — WINNER BY HP (${Math.max(redTank.hp, blueTank.hp)} HP)`)
 }
 
 // ── Button handlers ────────────────────────────────────────────────────────
@@ -524,12 +538,7 @@ document.getElementById('btnSpeed').addEventListener('click', (e) => {
 })
 
 document.getElementById('btnNextRound').addEventListener('click', () => {
-  ui.hideOverlay()
-  roundNum++
-  resetRound()
-  gameRunning = true
-  ui.log('red',  `ROUND ${roundNum} — DEPLOYING`, 'sys')
-  ui.log('blue', `ROUND ${roundNum} — DEPLOYING`, 'sys')
+  startNextRound()
 })
 
 document.getElementById('btnRestartMatch').addEventListener('click', () => {
@@ -553,6 +562,10 @@ function resetRound() {
 
 // Full reset (RESET button): clear scores, round, timer, tanks, obstacles.
 function fullReset() {
+  if (autoNextTimer) {
+    clearTimeout(autoNextTimer)
+    autoNextTimer = null
+  }
   gameRunning = false
   ui.hideOverlay()
   scoreRed = 0

@@ -153,6 +153,10 @@
             <input type="number" min="15" max="600" step="5" data-setting="match.durationSec" />
           </label>
           <label class="settings-field">
+            <span>Auto next round <em class="settings-hint">skip winner screen</em></span>
+            <input type="checkbox" data-setting="match.autoNextRound" />
+          </label>
+          <label class="settings-field">
             <span>Block HP</span>
             <input type="number" min="1" max="50" step="1" data-setting="battlefield.obstacleHp" />
           </label>
@@ -188,6 +192,24 @@
               <span class="ollama-connection-status" id="ollamaConnectionStatus" role="status" aria-live="polite">Not tested yet.</span>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <div class="settings-section-title">◆ CLOUD LLM KEYS</div>
+        <div class="settings-grid">
+          <label class="settings-field settings-field-wide">
+            <span>OpenAI API key <em class="settings-hint">stored in browser localStorage</em></span>
+            <input type="password" spellcheck="false" autocomplete="off" placeholder="sk-..." data-setting="llm.openaiApiKey" />
+          </label>
+          <label class="settings-field settings-field-wide">
+            <span>Claude API key <em class="settings-hint">stored in browser localStorage</em></span>
+            <input type="password" spellcheck="false" autocomplete="off" placeholder="sk-ant-..." data-setting="llm.claudeApiKey" />
+          </label>
+          <label class="settings-field settings-field-wide">
+            <span>Gemini API key <em class="settings-hint">stored in browser localStorage</em></span>
+            <input type="password" spellcheck="false" autocomplete="off" placeholder="AIza..." data-setting="llm.geminiApiKey" />
+          </label>
         </div>
       </section>
 
@@ -245,11 +267,11 @@
               <span>Controller <em class="settings-hint">— pick who drives this tank</em></span>
               <select data-setting="teams.red.controller">
                 <option value="human">Human (keyboard/joystick)</option>
-                <option value="auto">Auto (scripted AI)</option>
+                <option value="auto">Game enginer Auto</option>
                 <option value="ollama">Ollama (local LLM)</option>
-                <option value="openai" disabled>OpenAI (not wired up)</option>
-                <option value="claude" disabled>Claude (not wired up)</option>
-                <option value="gemini" disabled>Gemini (not wired up)</option>
+                <option value="openai">OpenAI</option>
+                <option value="claude">Claude</option>
+                <option value="gemini">Gemini</option>
               </select>
             </label>
             <label class="settings-field llm-only">
@@ -303,11 +325,11 @@
               <span>Controller</span>
               <select data-setting="teams.blue.controller">
                 <option value="human">Human (keyboard/joystick)</option>
-                <option value="auto">Auto (scripted AI)</option>
+                <option value="auto">Game enginer Auto</option>
                 <option value="ollama">Ollama (local LLM)</option>
-                <option value="openai" disabled>OpenAI (not wired up)</option>
-                <option value="claude" disabled>Claude (not wired up)</option>
-                <option value="gemini" disabled>Gemini (not wired up)</option>
+                <option value="openai">OpenAI</option>
+                <option value="claude">Claude</option>
+                <option value="gemini">Gemini</option>
               </select>
             </label>
             <label class="settings-field llm-only">

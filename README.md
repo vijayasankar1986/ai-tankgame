@@ -64,6 +64,35 @@ The dev server listens on **http://localhost:3000** (see `vite.config.js`).
 | `npm run dev`     | Development server + HMR         |
 | `npm run build`   | Production bundle → `dist/`      |
 | `npm run preview` | Serve the built `dist/` locally  |
+| `npm run fairness:test` | Run 100-round headless fairness check |
+
+---
+
+## Fairness test (100 rounds)
+
+Use the headless simulator to sanity-check side bias after gameplay changes.
+
+```bash
+npm run fairness:test
+```
+
+Example output:
+
+```text
+Fairness test complete (100 rounds)
+Layout: default, mode: deathmatch, duration: 120s
+Red wins : 31 (31.0%)
+Blue wins: 33 (33.0%)
+Draws    : 36 (36.0%)
+```
+
+You can also run custom sweeps (round count, layout, and duration):
+
+```bash
+node scripts/fairness-test.mjs --rounds 300 --layout maze --duration 120
+```
+
+Tip: expect some variance, but over large samples red/blue should stay close.
 
 ---
 

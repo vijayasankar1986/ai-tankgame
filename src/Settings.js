@@ -11,6 +11,7 @@ export const DEFAULTS = {
     speedDefault:  1,      // 1 / 2 / 3 ×
     mode:          'deathmatch', // 'deathmatch' | 'king'
     kingHp:        30,     // hits the king can take in Protect-The-King mode
+    autoNextRound: false,  // true = skip winner overlay and continue immediately
   },
   battlefield: {
     obstacleHp:    8,     // hits a block can absorb before crumbling
@@ -29,6 +30,9 @@ export const DEFAULTS = {
   // browser must call Ollama directly (usually your own PC at 127.0.0.1).
   llm: {
     ollamaBaseUrl: '', // empty = auto — see SettingsPanel / ollama.js
+    openaiApiKey: '',
+    claudeApiKey: '',
+    geminiApiKey: '',
   },
   teams: {
     red: {
@@ -72,7 +76,7 @@ function defaultAgents() {
     ollama: { model: 'mistral:7b',               intervalSec: 3, showReasoning: true, systemPromptExtra: '' },
     openai: { model: 'gpt-4o-mini',              intervalSec: 3, showReasoning: true, systemPromptExtra: '' },
     claude: { model: 'claude-3-5-haiku-latest',  intervalSec: 3, showReasoning: true, systemPromptExtra: '' },
-    gemini: { model: 'gemini-1.5-flash',         intervalSec: 3, showReasoning: true, systemPromptExtra: '' },
+    gemini: { model: 'gemini-2.0-flash',         intervalSec: 3, showReasoning: true, systemPromptExtra: '' },
   }
 }
 
@@ -145,8 +149,13 @@ function loadSettings() {
     // back to defaults silently.
   }
   migrateTeams(fresh)
-  if (!fresh.llm || typeof fresh.llm !== 'object') fresh.llm = { ollamaBaseUrl: '' }
+  if (!fresh.llm || typeof fresh.llm !== 'object') {
+    fresh.llm = { ollamaBaseUrl: '', openaiApiKey: '', claudeApiKey: '', geminiApiKey: '' }
+  }
   if (fresh.llm.ollamaBaseUrl === undefined) fresh.llm.ollamaBaseUrl = ''
+  if (fresh.llm.openaiApiKey === undefined) fresh.llm.openaiApiKey = ''
+  if (fresh.llm.claudeApiKey === undefined) fresh.llm.claudeApiKey = ''
+  if (fresh.llm.geminiApiKey === undefined) fresh.llm.geminiApiKey = ''
   return fresh
 }
 

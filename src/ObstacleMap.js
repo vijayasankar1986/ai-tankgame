@@ -81,8 +81,41 @@ export function createObstacles() {
   const layoutName = settings.battlefield.layout
   const raw = LAYOUTS[layoutName] || LAYOUTS.default
   const layout = typeof raw === 'function' ? raw() : raw
+  const symmetric = makeHorizontallySymmetric(layout, 660)
   const hp = settings.battlefield.obstacleHp
-  return layout.map(o => ({ ...o, hp, maxHp: hp }))
+  return symmetric.map(o => ({ ...o, hp, maxHp: hp }))
+}
+
+/**
+ * Keep only left-half + center walls, then mirror them to the right half.
+ * This guarantees both teams get identical terrain about the vertical center.
+ */
+function makeHorizontallySymmetric(layout, fieldWidth) {
+  const midX = fieldWidth / 2
+  const EPS = 0.001
+  const out = []
+  const seen = new Set()
+
+  const pushUnique = (o) => {
+    const key = `${o.x}|${o.y}|${o.w}|${o.h}`
+    if (seen.has(key)) return
+    seen.add(key)
+    out.push(o)
+  }
+
+  for (const o of layout) {
+    const centerX = o.x + o.w / 2
+    // Ignore right-half originals; they will be rebuilt by mirroring left.
+    if (centerX > midX + EPS) continue
+
+    pushUnique({ x: o.x, y: o.y, w: o.w, h: o.h })
+    const mirrorX = fieldWidth - o.x - o.w
+    if (Math.abs(mirrorX - o.x) > EPS) {
+      pushUnique({ x: mirrorX, y: o.y, w: o.w, h: o.h })
+    }
+  }
+
+  return out
 }
 
 // ── Procedural tight-maze generator ──────────────────────────────────────

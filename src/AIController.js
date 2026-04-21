@@ -203,7 +203,8 @@ export class AIController {
       [AI_STATE.ADVANCE]:  200,
       [AI_STATE.ATTACK]:   300,
       [AI_STATE.STRAFE]:   250,
-      [AI_STATE.RETREAT]:  400,
+      // Retreat can persist for long stretches; keep this less chatty.
+      [AI_STATE.RETREAT]:  1800,
     }[this.state] ?? 500
 
     if (now - this._lastLogTime > logInterval + Math.random() * 150) {

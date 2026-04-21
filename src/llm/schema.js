@@ -52,7 +52,8 @@ export function sanitizeDirective(raw) {
   }
 
   if (typeof raw.aggression === 'number' && Number.isFinite(raw.aggression)) {
-    out.aggression = Math.max(0, Math.min(1, raw.aggression))
+    // Keep a small floor so one bad directive can't force fully passive AI.
+    out.aggression = Math.max(0.15, Math.min(1, raw.aggression))
   }
 
   if (typeof raw.aim === 'string') {

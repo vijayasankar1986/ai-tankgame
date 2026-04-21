@@ -54,6 +54,10 @@ export class LLMController {
     this.currentDirective = null
     this._lastTickTs      = 0
     this._firstTickFired  = false
+    this._nextAllowedTickTs = 0
+    this._errorBackoffMs    = 0
+    this._lastErrorKey      = ''
+    this._lastErrorLogTs    = 0
   }
 
   // Proxy a few AIController fields so Tank.js keeps working unchanged.
@@ -72,12 +76,17 @@ export class LLMController {
     this.currentDirective = null
     this._lastTickTs = 0
     this._firstTickFired = false
+    this._nextAllowedTickTs = 0
+    this._errorBackoffMs = 0
+    this._lastErrorKey = ''
+    this._lastErrorLogTs = 0
   }
 
   // ── Internal ──────────────────────────────────────────────────────────
   _maybeTick() {
     if (this.inFlight) return
     const now = performance.now()
+    if (now < this._nextAllowedTickTs) return
     const due = !this._firstTickFired || (now - this._lastTickTs) >= this.intervalSec * 1000
     if (!due) return
     this._firstTickFired = true
@@ -86,7 +95,19 @@ export class LLMController {
     this._requestDirective()
       .catch(err => {
         this.lastError = err
-        this.onError(err)
+        const errText = String(err?.message || err)
+        const errKey = errText.slice(0, 140)
+        const nowMs = performance.now()
+        const shouldLog = errKey !== this._lastErrorKey || (nowMs - this._lastErrorLogTs) > 12_000
+        if (shouldLog) {
+          this.onError(err)
+          this._lastErrorLogTs = nowMs
+          this._lastErrorKey = errKey
+        }
+        this._errorBackoffMs = this._errorBackoffMs
+          ? Math.min(this._errorBackoffMs * 2, 20_000)
+          : 2_000
+        this._nextAllowedTickTs = nowMs + this._errorBackoffMs
       })
       .finally(() => { this.inFlight = false })
   }
@@ -116,6 +137,10 @@ export class LLMController {
     this.lastLatencyMs    = latencyMs
     this.callCount       += 1
     this.lastError        = null
+    this._errorBackoffMs  = 0
+    this._nextAllowedTickTs = 0
+    this._lastErrorKey    = ''
+    this._lastErrorLogTs  = 0
     // Apply aggression override for scripted fallback behavior too.
     this.ai.aggressionLevel = directive.aggression
     this.onThinking(directive, { latencyMs, callCount: this.callCount })

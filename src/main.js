@@ -147,7 +147,10 @@ function wireAiControllers() {
         // change every interval, and latency dips/spikes match real RTT.
         const ms      = Math.round(meta?.latencyMs ?? 0)
         const n       = meta?.callCount ?? 0
-        const suffix  = agent.showReasoning && d.reasoning ? ` — ${d.reasoning}` : ''
+        const shownReasoning = agent.showReasoning && d.reasoning
+          ? d.reasoning.slice(0, 72)
+          : ''
+        const suffix  = shownReasoning ? ` — ${shownReasoning}` : ''
         ui.log(teamKey,
           `[${t.controller.toUpperCase()} · ${agent.model} · #${n} · ${ms}ms] ${d.goal} (agg ${d.aggression.toFixed(2)})${suffix}`,
           'sys')
